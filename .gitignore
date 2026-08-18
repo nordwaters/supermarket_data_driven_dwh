@@ -1,0 +1,15 @@
+*.pyc
+__pycache__/
+.venv/
+venv/
+airflow-*.err
+airflow-*.log
+airflow-*.pid
+dbt/dbt_packages/
+dbt/logs/
+dbt/target/
+.logs/
+postgres_data/
+grafana_data/
+metabase_data/
+superset/

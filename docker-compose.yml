@@ -1,0 +1,121 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.7.1
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./scripts:/opt/airflow/scripts
+    - ./dbt:/opt/airflow/dbt
+  depends_on:
+    - postgres
+
+services:
+  # --- ХРАНИЛИЩЕ ДАННЫХ (DWH) И СЕРВИСНАЯ БД ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: dwh_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- ОРКЕСТРАЦИЯ (AIRFLOW) ---
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: always
+
+  # --- ВИЗУАЛИЗАЦИЯ (SUPERSET) ---
+  metabase:
+    image: metabase/metabase:latest
+    container_name: bi_metabase
+    ports:
+      - "3030:3000" # <--- ИЗМЕНИЛИ ВНЕШНИЙ ПОРТ НА 3030
+    volumes:
+      - metabase_data:/metabase-data
+    restart: always
+
+  # --- ТРАНСФОРМАЦИЯ ДАННЫХ (DBT) ---
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.7.3
+    container_name: dwh_dbt
+    volumes:
+      - ./dbt:/usr/app
+      - ./dbt/profiles.yml:/root/.dbt/profiles.yml
+    profiles:
+      - donotstart # Этот профиль нужен, чтобы контейнер не запускался сам по себе, а ждал команду
+    environment:
+      - DBT_PROFILES_DIR=/usr/app
+    depends_on:
+      - postgres
+
+  # --- МОНИТОРИНГ (PROMETHEUS, GRAFANA, CADVISOR) ---
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: monitor_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8082:8080"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitor_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitor_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  postgres_data:
+  grafana_data:
+  metabase_data:

@@ -1,0 +1,14 @@
+name: 'supermarket_dwh'
+version: '1.0.0'
+config-version: 2
+profile: 'supermarket_dwh'
+model-paths: ['models']
+seed-paths: ['seeds']
+test-paths: ['tests']
+analysis-paths: ['analyses']
+models:
+  supermarket_dwh:
+    staging:
+      +materialized: view
+    analytics:
+      +materialized: table
