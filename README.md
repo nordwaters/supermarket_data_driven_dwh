@@ -79,7 +79,7 @@ docker compose up -d
 ## 2 Запуск компонентов мониторинга
 Для изоляции от системных портов Linux Mint агенты мониторинга и Grafana запускаются прямыми командами в общую сеть
 Запуск Node Exporter сбор метрик железа
-docker run -d --name monitor_node_exporter --network supermarket_dwh_project_default --network-alias node_exporter -p 9100:9100 --pid=host -v /:/host:ro,rslave prom/node-exporter:latest --path.rootfs=/host
+./start.sh
 Запуск cAdvisor сбор метрик контейнеров Docker
 docker run -d --name monitor_cadvisor --network supermarket_dwh_project_default --network-alias cadvisor -p 8082:8080 --volume=/:/rootfs:ro --volume=/var/run:/var/run:ro --volume=/sys:/sys:ro --volume=/var/lib/docker/:/var/lib/docker:ro --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro --privileged --device=/dev/kmsg gcr.io/cadvisor/cadvisor:v0.49.1
 Запуск Grafana Визуализация метрик
