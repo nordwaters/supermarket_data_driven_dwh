@@ -111,7 +111,7 @@ Airflow отвечает за бизнес-логику и последоват�
 ```
 
 ### Точки доступа к веб-интерфейсам:
-* **Apache Airflow**: http://localhost:8080 (Логин: admin / Пароль: admin)
+* **Apache Airflow**: http://localhost:8081 (Логин: admin / Пароль: admin)
 * **Metabase BI**: http://localhost:3030 (Бизнес-дашборды исторических продаж и прогнозов)
 * **Grafana**: http://localhost:8085 (DevOps-мониторинг инфраструктуры, ID дашборда 10619)
 * **Prometheus**: http://localhost:9090 (Статус сбора метрик /targets)
